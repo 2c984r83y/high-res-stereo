@@ -13,7 +13,7 @@ import torch.nn.functional as F
 import numpy as np
 import time
 from models import hsm
-from utils import logger
+# from utils import logger
 torch.backends.cudnn.benchmark=True
 
 
@@ -22,11 +22,11 @@ parser.add_argument('--maxdisp', type=int ,default=384,
                     help='maxium disparity')
 parser.add_argument('--logname', default='logname',
                     help='log name')
-parser.add_argument('--database', default='/ssd//',
+parser.add_argument('--database', default='/root/high-res-stereo/dataset',
                     help='data path')
 parser.add_argument('--epochs', type=int, default=10,
                     help='number of epochs to train')
-parser.add_argument('--batchsize', type=int, default=28,
+parser.add_argument('--batchsize', type=int, default=14,
                     help='samples per batch')
 parser.add_argument('--loadmodel', default=None,
                     help='weights path')
@@ -66,24 +66,25 @@ from dataloader import MiddleburyLoader as DA
 
 batch_size = args.batchsize
 scale_factor = args.maxdisp / 384. # controls training resolution
-all_left_img, all_right_img, all_left_disp, all_right_disp = ls.dataloader('%s/carla-highres/trainingF'%args.database)
-loader_carla = DA.myImageFloder(all_left_img,all_right_img,all_left_disp,right_disparity=all_right_disp, rand_scale=[0.225,0.6*scale_factor], rand_bright=[0.8,1.2],order=2)
+# all_left_img, all_right_img, all_left_disp, all_right_disp = ls.dataloader('%s/carla-highres/trainingF'%args.database)
+# loader_carla = DA.myImageFloder(all_left_img,all_right_img,all_left_disp,right_disparity=all_right_disp, rand_scale=[0.225,0.6*scale_factor], rand_bright=[0.8,1.2],order=2)
 
-all_left_img, all_right_img, all_left_disp, all_right_disp = ls.dataloader('%s/mb-ex-training/trainingF'%args.database)  # mb-ex
-loader_mb = DA.myImageFloder(all_left_img,all_right_img,all_left_disp,right_disparity=all_right_disp, rand_scale=[0.225,0.6*scale_factor], rand_bright=[0.8,1.2],order=0)
+# all_left_img, all_right_img, all_left_disp, all_right_disp = ls.dataloader('%s/mb-ex-training/trainingF'%args.database)  # mb-ex
+# loader_mb = DA.myImageFloder(all_left_img,all_right_img,all_left_disp,right_disparity=all_right_disp, rand_scale=[0.225,0.6*scale_factor], rand_bright=[0.8,1.2],order=0)
 
-all_left_img, all_right_img, all_left_disp, all_right_disp = lt.dataloader('%s/sceneflow/'%args.database)
-loader_scene = DA.myImageFloder(all_left_img,all_right_img,all_left_disp,right_disparity=all_right_disp, rand_scale=[0.9,2.4*scale_factor], order=2)
+# all_left_img, all_right_img, all_left_disp, all_right_disp = lt.dataloader('%s/sceneflow/'%args.database)
+# loader_scene = DA.myImageFloder(all_left_img,all_right_img,all_left_disp,right_disparity=all_right_disp, rand_scale=[0.9,2.4*scale_factor], order=2)
 
-all_left_img, all_right_img, all_left_disp,_,_,_ = lk15.dataloader('%s/kitti_scene/training/'%args.database,typ='train') # change to trainval when finetuning on KITTI
+all_left_img, all_right_img, all_left_disp,_,_,_ = lk15.dataloader('%s/training/'%args.database,typ='train') # change to trainval when finetuning on KITTI
 loader_kitti15 = DA.myImageFloder(all_left_img,all_right_img,all_left_disp, rand_scale=[0.9,2.4*scale_factor], order=0)
-all_left_img, all_right_img, all_left_disp = lk12.dataloader('%s/data_stereo_flow/training/'%args.database)
-loader_kitti12 = DA.myImageFloder(all_left_img,all_right_img,all_left_disp, rand_scale=[0.9,2.4*scale_factor], order=0)
+# all_left_img, all_right_img, all_left_disp = lk12.dataloader('%s/training/'%args.database)
+# loader_kitti12 = DA.myImageFloder(all_left_img,all_right_img,all_left_disp, rand_scale=[0.9,2.4*scale_factor], order=0)
 
-all_left_img, all_right_img, all_left_disp, _ = ls.dataloader('%s/eth3d/'%args.database)
-loader_eth3d = DA.myImageFloder(all_left_img,all_right_img,all_left_disp, rand_scale=[0.9,2.4*scale_factor],order=0)
+# all_left_img, all_right_img, all_left_disp, _ = ls.dataloader('%s/eth3d/'%args.database)
+# loader_eth3d = DA.myImageFloder(all_left_img,all_right_img,all_left_disp, rand_scale=[0.9,2.4*scale_factor],order=0)
 
-data_inuse = torch.utils.data.ConcatDataset([loader_carla]*40 + [loader_mb]*500 + [loader_scene] + [loader_kitti15] + [loader_kitti12]*80 + [loader_eth3d]*1000)
+# data_inuse = torch.utils.data.ConcatDataset([loader_carla]*40 + [loader_mb]*500 + [loader_scene] + [loader_kitti15] + [loader_kitti12]*80 + [loader_eth3d]*1000)
+data_inuse = torch.utils.data.ConcatDataset([loader_kitti15])
 
 TrainImgLoader = torch.utils.data.DataLoader(
          data_inuse, 
@@ -138,7 +139,7 @@ def adjust_learning_rate(optimizer, epoch):
 
 
 def main():
-    log = logger.Logger(args.savemodel, name=args.logname)
+    # log = logger.Logger(args.savemodel, name=args.logname)
     total_iters = 0
 
     for epoch in range(1, args.epochs+1):
@@ -152,19 +153,19 @@ def main():
             print('Iter %d training loss = %.3f , time = %.2f' %(batch_idx, loss, time.time() - start_time))
             total_train_loss += loss
 
-            if total_iters %10 == 0:
-                log.scalar_summary('train/loss_batch',loss, total_iters)
-            if total_iters %100 == 0:
-                log.image_summary('train/left',imgL_crop[0:1],total_iters)
-                log.image_summary('train/right',imgR_crop[0:1],total_iters)
-                log.image_summary('train/gt0',disp_crop_L[0:1],total_iters)
-                log.image_summary('train/entropy',vis['entropy'][0:1],total_iters)
-                log.histo_summary('train/disparity_hist',vis['output3'], total_iters)
-                log.histo_summary('train/gt_hist',np.asarray(disp_crop_L), total_iters)
-                log.image_summary('train/output3',vis['output3'][0:1],total_iters)
-                log.image_summary('train/output4',vis['output4'][0:1],total_iters)
-                log.image_summary('train/output5',vis['output5'][0:1],total_iters)
-                log.image_summary('train/output6',vis['output6'][0:1],total_iters)
+            # if total_iters %10 == 0:
+                # log.scalar_summary('train/loss_batch',loss, total_iters)
+            # if total_iters %100 == 0:
+                # log.image_summary('train/left',imgL_crop[0:1],total_iters)
+                # log.image_summary('train/right',imgR_crop[0:1],total_iters)
+                # log.image_summary('train/gt0',disp_crop_L[0:1],total_iters)
+                # log.image_summary('train/entropy',vis['entropy'][0:1],total_iters)
+                # log.histo_summary('train/disparity_hist',vis['output3'], total_iters)
+                # log.histo_summary('train/gt_hist',np.asarray(disp_crop_L), total_iters)
+                # log.image_summary('train/output3',vis['output3'][0:1],total_iters)
+                # log.image_summary('train/output4',vis['output4'][0:1],total_iters)
+                # log.image_summary('train/output5',vis['output5'][0:1],total_iters)
+                # log.image_summary('train/output6',vis['output6'][0:1],total_iters)
                     
             total_iters += 1
 
@@ -177,7 +178,7 @@ def main():
                     'train_loss': total_train_loss/len(TrainImgLoader),
                 }, savefilename)
 
-        log.scalar_summary('train/loss',total_train_loss/len(TrainImgLoader), epoch)
+        # log.scalar_summary('train/loss',total_train_loss/len(TrainImgLoader), epoch)
         torch.cuda.empty_cache()
 
 

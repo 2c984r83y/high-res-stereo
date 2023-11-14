@@ -42,12 +42,16 @@ from dataloader import listfiles as DA
 test_left_img, test_right_img, _, _ = DA.dataloader(args.datapath)
 
 # construct model
-model = hsm(128,args.clean,level=args.level)
-model = nn.DataParallel(model, device_ids=[0])
-model.cuda()
+model = hsm(128,args.clean,level=args.level) 
+# model = nn.DataParallel(model, device_ids=[0])
+model = nn.DataParallel(model, device_ids=[0, 1]) # use 2 GPUs
+model.cuda() # use CUDA
 
+# 将预训练模型的参数加载到神经网络模型中
+# 以便在测试或使用模型时使用预训练的参数
 if args.loadmodel is not None:
     pretrained_dict = torch.load(args.loadmodel)
+    # 去除预训练模型中与视差有关的参数
     pretrained_dict['state_dict'] =  {k:v for k,v in pretrained_dict['state_dict'].items() if 'disp' not in k}
     model.load_state_dict(pretrained_dict['state_dict'],strict=False)
 else:
@@ -56,6 +60,7 @@ print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in mo
 
 # dry run
 multip = 48
+# 四维矩阵，第一维表示图片数量，第二维表示通道数，第三维表示高度，第四维表示宽度？
 imgL = np.zeros((1,3,24*multip,32*multip))
 imgR = np.zeros((1,3,24*multip,32*multip))
 imgL = Variable(torch.FloatTensor(imgL).cuda())
