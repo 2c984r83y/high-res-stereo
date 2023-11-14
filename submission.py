@@ -63,11 +63,18 @@ multip = 48
 # 四维矩阵，第一维表示图片数量，第二维表示通道数，第三维表示高度，第四维表示宽度？
 imgL = np.zeros((1,3,24*multip,32*multip))
 imgR = np.zeros((1,3,24*multip,32*multip))
+# 图像转换为PyTorch张量，并将其移动到GPU上进行计算。
+# 具体来说，`imgL`和`imgR`是两个包含图像数据的变量，
+# 这些数据最初以NumPy数组的形式存储。
+# 使用`torch.FloatTensor()`函数将这些数组转换为PyTorch张量。
+# 使用`Variable()`函数将这些张量包装成PyTorch变量
+# 使用`.cuda()`函数将这些变量移动到GPU上进行计算。
 imgL = Variable(torch.FloatTensor(imgL).cuda())
 imgR = Variable(torch.FloatTensor(imgR).cuda())
+# 禁用梯度计算，以提高计算速度和效率
 with torch.no_grad():
-    model.eval()
-    pred_disp,entropy = model(imgL,imgR)
+    model.eval() # 设置为评估模式
+    pred_disp,entropy = model(imgL,imgR) # 视差图: pred_disp 不确定性图: entropy
 
 def main():
     processed = get_transform()
@@ -161,6 +168,7 @@ def main():
             
         torch.cuda.empty_cache()
 
+# code that will only be executed when the script is run as the main program
 if __name__ == '__main__':
     main()
 
