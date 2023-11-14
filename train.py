@@ -22,6 +22,7 @@ parser.add_argument('--maxdisp', type=int ,default=384,
                     help='maxium disparity')
 parser.add_argument('--logname', default='logname',
                     help='log name')
+# In AutoDL cloud platform
 parser.add_argument('--database', default='/root/high-res-stereo/dataset',
                     help='data path')
 parser.add_argument('--epochs', type=int, default=10,

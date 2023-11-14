@@ -20,7 +20,7 @@ cudnn.benchmark = False
 parser = argparse.ArgumentParser(description='HSM')
 parser.add_argument('--datapath', default='./data-mbtest/',
                     help='test data path')
-parser.add_argument('--loadmodel', default=None,
+parser.add_argument('--loadmodel', default='/root/high-res-stereo/logname/finetune_999.tar',
                     help='model path')
 parser.add_argument('--outdir', default='output',
                     help='output dir')
