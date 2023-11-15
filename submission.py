@@ -88,10 +88,11 @@ def main():
         imgR_o = (skimage.io.imread(test_right_img[inx]).astype('float32'))[:,:,:3]
 
         # # mask 用于去除像素值为 0 的区域
-        # maskL = torch.where(imgL_o == 0, torch.ones_like(imgL_o), torch.zeros_like(imgL_o))
-        # maskR = torch.where(imgR_o == 0, torch.ones_like(imgR_o), torch.zeros_like(imgR_o))
-        # imgL_o = torch.mul(imgL_o, maskL)
-        # imgR_o = torch.mul(imgR_o, maskR)
+        # mask = (imgL_o[:,:,0]!=0).astype(np.float32)
+        # imgL_o[:,:,0] = imgL_o[:,:,0]*mask
+        # imgL_o[:,:,1] = imgL_o[:,:,1]*mask
+        # imgL_o[:,:,2] = imgL_o[:,:,2]*mask
+
 
         # 获取图像的尺寸
         imgsize = imgL_o.shape[:2]
