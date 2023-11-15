@@ -25,8 +25,8 @@ class toTensorLegacy(object):
 
 def get_transform():
     t_list = [
-        toTensorLegacy(),
-        transforms.Normalize(**__imagenet_stats),
+        toTensorLegacy(), # 转为 tensor transforms.ToTensor()
+        transforms.Normalize(**__imagenet_stats), # 归一化 transforms.Normalize(**__imagenet_stats)
     ]
-
+    # 组合为一个 transform 对象
     return transforms.Compose(t_list)

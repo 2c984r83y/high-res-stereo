@@ -41,7 +41,7 @@ args = parser.parse_args()
 from dataloader import listfiles as DA
 test_left_img, test_right_img, _, _ = DA.dataloader(args.datapath)
 
-# construct model
+# construct model，构建模型
 model = hsm(128,args.clean,level=args.level) 
 # model = nn.DataParallel(model, device_ids=[0])
 model = nn.DataParallel(model, device_ids=[0, 1]) # use 2 GPUs
@@ -79,12 +79,17 @@ with torch.no_grad():
 def main():
     processed = get_transform()
     model.eval()
+    # 遍历测试集中的每一张图片
     for inx in range(len(test_left_img)):
+        # 打印当前处理的图片路径
         print(test_left_img[inx])
+        # 读取图片，转为float32类型，获取图像的RGB通道
         imgL_o = (skimage.io.imread(test_left_img[inx]).astype('float32'))[:,:,:3]
         imgR_o = (skimage.io.imread(test_right_img[inx]).astype('float32'))[:,:,:3]
+        # 获取图像的尺寸
         imgsize = imgL_o.shape[:2]
 
+        # 读取图片的最大视差
         if args.max_disp>0:
             if args.max_disp % 16 != 0:
                 args.max_disp = 16 * math.floor(args.max_disp/16)
@@ -94,22 +99,24 @@ def main():
                 lines = f.readlines()
                 max_disp = int(int(lines[6].split('=')[-1]))
 
-        ## change max disp
-        tmpdisp = int(max_disp*args.testres//64*64)
+        # change max disp
+        tmpdisp = int(max_disp*args.testres//64*64) # // 整数除法，64的倍数
         if (max_disp*args.testres/64*64) > tmpdisp:
             model.module.maxdisp = tmpdisp + 64
         else:
             model.module.maxdisp = tmpdisp
         if model.module.maxdisp ==64: model.module.maxdisp=128
+        # 获取视差回归对象，将模型输出的视差图像转换为深度图像
         model.module.disp_reg8 =  disparityregression(model.module.maxdisp,16).cuda()
         model.module.disp_reg16 = disparityregression(model.module.maxdisp,16).cuda()
         model.module.disp_reg32 = disparityregression(model.module.maxdisp,32).cuda()
         model.module.disp_reg64 = disparityregression(model.module.maxdisp,64).cuda()
         print(model.module.maxdisp)
         
-        # resize
+        # resize test img to testres
         imgL_o = cv2.resize(imgL_o,None,fx=args.testres,fy=args.testres,interpolation=cv2.INTER_CUBIC)
         imgR_o = cv2.resize(imgR_o,None,fx=args.testres,fy=args.testres,interpolation=cv2.INTER_CUBIC)
+        # 归一化, processed = get_transform()
         imgL = processed(imgL_o).numpy()
         imgR = processed(imgR_o).numpy()
 
@@ -117,8 +124,8 @@ def main():
         imgR = np.reshape(imgR,[1,3,imgR.shape[1],imgR.shape[2]])
 
         ##fast pad
-        max_h = int(imgL.shape[2] // 64 * 64)
-        max_w = int(imgL.shape[3] // 64 * 64)
+        max_h = int(imgL.shape[2] // 64 * 64)   # 最大高度
+        max_w = int(imgL.shape[3] // 64 * 64)   # 最大宽度
         if max_h < imgL.shape[2]: max_h += 64
         if max_w < imgL.shape[3]: max_w += 64
 
@@ -130,10 +137,11 @@ def main():
         # test
         imgL = Variable(torch.FloatTensor(imgL).cuda())
         imgR = Variable(torch.FloatTensor(imgR).cuda())
+        # 禁用梯度计算，以提高计算速度和效率
         with torch.no_grad():
             torch.cuda.synchronize()
             start_time = time.time()
-            pred_disp,entropy = model(imgL,imgR)
+            pred_disp,entropy = model(imgL,imgR) # 调用模型，获取视差图和不确定性图，model = hsm(128,args.clean,level=args.level) 
             torch.cuda.synchronize()
             ttime = (time.time() - start_time); print('time = %.2f' % (ttime*1000) )
         pred_disp = torch.squeeze(pred_disp).data.cpu().numpy()
