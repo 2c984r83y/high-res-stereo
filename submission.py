@@ -58,7 +58,7 @@ else:
     print('run with random init')
 print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
 
-# dry run
+# dry run, 用于预热GPU，以便在测试时获得更准确的计时
 multip = 48
 # 四维矩阵，第一维表示图片数量，第二维表示通道数，第三维表示高度，第四维表示宽度？
 imgL = np.zeros((1,3,24*multip,32*multip))
@@ -86,6 +86,13 @@ def main():
         # 读取图片，转为float32类型，获取图像的RGB通道
         imgL_o = (skimage.io.imread(test_left_img[inx]).astype('float32'))[:,:,:3]
         imgR_o = (skimage.io.imread(test_right_img[inx]).astype('float32'))[:,:,:3]
+
+        # # mask 用于去除像素值为 0 的区域
+        # maskL = torch.where(imgL_o == 0, torch.ones_like(imgL_o), torch.zeros_like(imgL_o))
+        # maskR = torch.where(imgR_o == 0, torch.ones_like(imgR_o), torch.zeros_like(imgR_o))
+        # imgL_o = torch.mul(imgL_o, maskL)
+        # imgR_o = torch.mul(imgR_o, maskR)
+
         # 获取图像的尺寸
         imgsize = imgL_o.shape[:2]
 
