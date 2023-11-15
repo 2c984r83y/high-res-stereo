@@ -38,7 +38,10 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
 args = parser.parse_args()
 torch.manual_seed(args.seed)
 
+# 创建 HSM model
 model = hsm(args.maxdisp,clean=False,level=1)
+# 多 GPU 模式
+# model = nn.DataParallel(model, device_ids=[0,1])
 model = nn.DataParallel(model)
 model.cuda()
 
@@ -49,7 +52,7 @@ if args.loadmodel is not None:
     model.load_state_dict(pretrained_dict['state_dict'],strict=False)
 
 print('Number of model parameters: {}'.format(sum([p.data.nelement() for p in model.parameters()])))
-
+# Use Adam optimizer
 optimizer = optim.Adam(model.parameters(), lr=0.1, betas=(0.9, 0.999))
 
 def _init_fn(worker_id):
@@ -103,32 +106,39 @@ def train(imgL,imgR,disp_L):
 
         imgL, imgR, disp_true = imgL.cuda(), imgR.cuda(), disp_L.cuda()
 
-        #---------
-        mask = (disp_true > 0) & (disp_true < args.maxdisp)
+        # Add mask
+        mask = (imgR > 0) & (imgL > 0) & (disp_true > 0) & (disp_true < args.maxdisp)
         mask.detach_()
         #----
-
+        # 清空梯度
         optimizer.zero_grad()
+        # stacked, 张量，左右图像的特征表示
+        # entropy, 张量，左右图像的特征表示的熵
         stacked,entropy = model(imgL,imgR)
+        # loss 见论文 3.1 Multi-scale loss
         loss = (64./85)*F.smooth_l1_loss(stacked[0][mask], disp_true[mask], size_average=True) + \
                (16./85)*F.smooth_l1_loss(stacked[1][mask], disp_true[mask], size_average=True) + \
                 (4./85)*F.smooth_l1_loss(stacked[2][mask], disp_true[mask], size_average=True) + \
                 (1./85)*F.smooth_l1_loss(stacked[3][mask], disp_true[mask], size_average=True)
+        # 反向传播
         loss.backward()
+        # 更新模型的权重和偏置
         optimizer.step()
+        # 用于 log
         vis = {}
         vis['output3'] = stacked[0].detach().cpu().numpy()
         vis['output4'] = stacked[1].detach().cpu().numpy()
         vis['output5'] = stacked[2].detach().cpu().numpy()
         vis['output6'] = stacked[3].detach().cpu().numpy()
         vis['entropy'] = entropy.detach().cpu().numpy()
+        # 获取损失函数的值
         lossvalue = loss.data
 
         del stacked
         del loss
         return lossvalue,vis
 
-
+# 设置学习率
 def adjust_learning_rate(optimizer, epoch):
     if epoch <= args.epochs - 1:
         lr = 1e-3
@@ -141,7 +151,7 @@ def adjust_learning_rate(optimizer, epoch):
 
 def main():
     # log = logger.Logger(args.savemodel, name=args.logname)
-    total_iters = 0
+    total_iters = 0 # 记录迭代次数
 
     for epoch in range(1, args.epochs+1):
         total_train_loss = 0
@@ -150,6 +160,7 @@ def main():
         ## training ##
         for batch_idx, (imgL_crop, imgR_crop, disp_crop_L) in enumerate(TrainImgLoader):
             start_time = time.time() 
+            # 训练
             loss,vis = train(imgL_crop,imgR_crop, disp_crop_L)
             print('Iter %d training loss = %.3f , time = %.2f' %(batch_idx, loss, time.time() - start_time))
             total_train_loss += loss
@@ -171,7 +182,7 @@ def main():
             total_iters += 1
 
             if (total_iters + 1)%2000==0:
-                #SAVE
+                # SAVE
                 savefilename = args.savemodel+'/'+args.logname+'/finetune_'+str(total_iters)+'.tar'
                 torch.save({
                     'iters': total_iters,
