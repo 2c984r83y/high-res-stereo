@@ -14,11 +14,11 @@ class toTensorLegacy(object):
         Returns:
             Tensor: Converted image.
         """
-        if isinstance( pic, np.ndarray ):
-                # This is what TorchVision 0.2.0 returns for transforms.toTensor() for np.ndarray
-        	return torch.from_numpy( pic.transpose((2, 0, 1))).float().div(255)
+        if isinstance(pic, np.ndarray):
+            # This is what TorchVision 0.2.0 returns for transforms.toTensor() for np.ndarray
+            return torch.from_numpy(pic.transpose((2, 0, 1))).float().div(255)
         else:
-                return transforms.to_tensor( pic )
+            return transforms.to_tensor(pic)
     def __repr__(self):
         return self.__class__.__name__ + '()'
 
